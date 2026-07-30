@@ -70,6 +70,11 @@ export interface Listing {
   payment_methods: string[];
   whatsapp: string;
   is_hidden_by_admin: boolean;
+  is_24_7: boolean;
+  capacity: number | null;
+  facilities: string[];
+  rating_avg: number;
+  rating_count: number;
   created_at: string;
 }
 
@@ -130,4 +135,17 @@ export const PAYMENT_METHOD_OPTIONS = [
   { value: 'card', label: 'بطاقة بنكية' },
   { value: 'wallet', label: 'محفظة رقمية' },
   { value: 'bank', label: 'تحويل بنكي' },
+];
+
+export const FACILITY_OPTIONS = [
+  { value: 'parking', label: 'موقف سيارات' },
+  { value: 'ac', label: 'تكييف مركزي' },
+  { value: 'catering', label: 'ضيافة وتموين' },
+  { value: 'sound', label: 'نظام صوتي' },
+  { value: 'stage', label: 'مسرح' },
+  { value: 'lighting', label: 'إضاءة احترافية' },
+  { value: 'garden', label: 'حديقة خارجية' },
+  { value: 'bridal_room', label: 'غرفة العروس' },
+  { value: 'projector', label: 'شاشة عرض' },
+  { value: 'generator', label: 'مولد كهرباء' },
 ];

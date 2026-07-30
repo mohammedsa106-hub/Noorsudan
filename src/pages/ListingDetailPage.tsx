@@ -8,7 +8,9 @@ import {
   ChevronLeft, Phone, Mail, MapPin, DollarSign, Building,
   Navigation, User, MessageCircle, Truck,
   CreditCard, Clock, ShoppingBag, Star, BadgeCheck,
+  Users, Calendar, Wallet, CheckCircle2,
 } from 'lucide-react';
+import { FACILITY_OPTIONS } from '@/lib/supabase';
 
 export function ListingDetailPage({ id }: { id: string }) {
   const [listing, setListing] = useState<Listing | null>(null);
@@ -131,6 +133,11 @@ export function ListingDetailPage({ id }: { id: string }) {
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${listing.is_open ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
             <Clock size={12} /> {listing.is_open ? 'مفتوح الآن' : 'مغلق'}
           </span>
+          {listing.is_24_7 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/15 text-blue-400">
+              <Clock size={12} /> متاح 24/7
+            </span>
+          )}
           {listing.delivery_available && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/15 text-blue-400">
               <Truck size={12} /> توصيل متاح
@@ -147,6 +154,61 @@ export function ListingDetailPage({ id }: { id: string }) {
             </span>
           )}
         </div>
+
+        {/* Rating for craftsmen/drivers */}
+        {(category?.slug === 'craftsmen' || category?.slug === 'drivers') && listing.rating_count > 0 && (
+          <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-ink-600/40 border border-gold-400/10">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star key={n} size={16} className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
+              ))}
+            </div>
+            <span className="text-sm text-gold-100 font-bold">{listing.rating_avg.toFixed(1)}</span>
+            <span className="text-xs text-gold-300/50">({listing.rating_count} تقييم)</span>
+          </div>
+        )}
+
+        {/* Event hall capacity & facilities */}
+        {category?.slug === 'events' && (listing.capacity != null || listing.facilities.length > 0) && (
+          <div className="mb-4 p-4 rounded-xl bg-ink-600/40 border border-gold-400/10 space-y-3">
+            {listing.capacity != null && (
+              <div className="flex items-center gap-2 text-sm text-gold-100">
+                <Users size={16} className="gold-text" />
+                السعة: <span className="font-bold">{listing.capacity} شخص</span>
+              </div>
+            )}
+            {listing.facilities.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {listing.facilities.map((f) => {
+                  const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
+                  return (
+                    <span key={f} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gold-400/10 text-gold-300">
+                      <CheckCircle2 size={11} /> {label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Craftsmen/Drivers wallet fee info */}
+        {(category?.slug === 'craftsmen' || category?.slug === 'drivers') && listing.price != null && (
+          <div className="mb-4 p-3 rounded-xl bg-ink-600/40 border border-gold-400/10">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gold-200/60 flex items-center gap-1.5">
+                <DollarSign size={14} className="gold-text" /> السعر التقديري
+              </span>
+              <span className="text-gold-100 font-bold">{listing.price.toLocaleString()} ج.س</span>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-gold-400/10">
+              <span className="text-gold-300/50 flex items-center gap-1">
+                <Wallet size={12} /> رسوم المنصة (7%)
+              </span>
+              <span className="text-gold-300/70">{Math.round(listing.price * 0.07)} ج.س</span>
+            </div>
+          </div>
+        )}
 
         {listing.description && (
           <p className="text-gold-200/70 leading-relaxed mb-6 whitespace-pre-wrap">
@@ -262,6 +324,19 @@ export function ListingDetailPage({ id }: { id: string }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Event hall booking button */}
+      {category?.slug === 'events' && (
+        <div className="glass-card rounded-2xl p-6 mb-6 text-center">
+          <button
+            onClick={() => alert('سيتم تحويلك لصفحة الحجز — تواصل مع القاعة مباشرة عبر الهاتف أو واتساب')}
+            className="btn-gold rounded-xl px-8 py-3.5 inline-flex items-center gap-2 text-sm font-bold"
+          >
+            <Calendar size={18} /> طلب حجز هذه القاعة
+          </button>
+          <p className="text-xs text-gold-200/40 mt-2">سيتم التواصل معك لتأكيد الحجز والتاريخ</p>
         </div>
       )}
 

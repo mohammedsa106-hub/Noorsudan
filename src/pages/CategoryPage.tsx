@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, type Category, type Subcategory, type Listing, type Product, PAYMENT_METHOD_OPTIONS } from '@/lib/supabase';
+import { supabase, type Category, type Subcategory, type Listing, type Product, PAYMENT_METHOD_OPTIONS, FACILITY_OPTIONS } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
@@ -8,7 +8,7 @@ import {
   ChevronLeft, Edit2, Trash2,
   MapPinned, Navigation, ExternalLink, LayoutGrid,
   Plus, Truck, MessageCircle, Clock, CreditCard,
-  ShoppingBag, Star
+  ShoppingBag, Star, Users, Calendar, Wallet, CheckCircle2,
 } from 'lucide-react';
 import { MapPicker } from '@/components/MapPicker';
 import { ImageUploader, type ImageItem } from '@/components/ImageUploader';
@@ -26,6 +26,7 @@ export function CategoryPage({ slug }: { slug: string }) {
   const [editing, setEditing] = useState<Listing | null>(null);
   const [listingImages, setListingImages] = useState<Record<string, string[]>>({});
   const [listingProducts, setListingProducts] = useState<Record<string, Product[]>>({});
+  const [openNowOnly, setOpenNowOnly] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -71,9 +72,12 @@ export function CategoryPage({ slug }: { slug: string }) {
       });
   }, [slug]);
 
-  const visibleListings = activeSub
+  let visibleListings = activeSub
     ? listings.filter((l) => l.subcategory_id === activeSub.id)
     : listings;
+  if (openNowOnly) {
+    visibleListings = visibleListings.filter((l) => l.is_open || l.is_24_7);
+  }
 
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا الإعلان؟')) return;
@@ -204,6 +208,26 @@ export function CategoryPage({ slug }: { slug: string }) {
           </div>
         )}
 
+        {/* Open Now filter for health category */}
+        {slug === 'health' && listings.length > 0 && (
+          <div className="mb-4 flex items-center gap-3">
+            <button
+              onClick={() => setOpenNowOnly((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
+                openNowOnly
+                  ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                  : 'glass-card text-gold-200/60 border-gold-400/15 hover:border-gold-400/30'
+              }`
+              }
+            >
+              <Clock size={16} /> {openNowOnly ? 'مفتوح الآن فقط' : 'عرض المفتوح الآن فقط'}
+            </button>
+            {openNowOnly && (
+              <span className="text-xs text-gold-300/60">{visibleListings.length} صيدلية/خدمة مفتوحة</span>
+            )}
+          </div>
+        )}
+
         {/* Active subcategory label */}
         {activeSub && (
           <div className="mb-4 flex items-center gap-2 text-sm text-gold-200/60">
@@ -237,6 +261,7 @@ export function CategoryPage({ slug }: { slug: string }) {
               <ListingCard
                 key={l.id}
                 listing={l}
+                categorySlug={slug}
                 subName={subcats.find((s) => s.id === l.subcategory_id)?.name}
                 isOwner={l.owner_id === user?.id}
                 isAdmin={profile?.account_type === 'admin'}
@@ -254,6 +279,7 @@ export function CategoryPage({ slug }: { slug: string }) {
       {showForm && category && (
         <EntityFormModal
           categoryId={category.id}
+          categorySlug={slug}
           categoryName={category.name}
           subcats={subcats}
           preselectedSub={activeSub}
@@ -268,6 +294,7 @@ export function CategoryPage({ slug }: { slug: string }) {
 
 function ListingCard({
   listing,
+  categorySlug,
   subName,
   isOwner,
   isAdmin,
@@ -278,6 +305,7 @@ function ListingCard({
   products,
 }: {
   listing: Listing;
+  categorySlug: string;
   subName?: string;
   isOwner: boolean;
   isAdmin: boolean;
@@ -290,6 +318,11 @@ function ListingCard({
   const hasGps = listing.lat != null && listing.lng != null;
   const coverImage = images[0] || listing.image_url;
   const offers = products.filter((p) => p.is_offer);
+  const isPharmacy = categorySlug === 'health';
+  const isEventHall = categorySlug === 'events';
+  const isCraftsman = categorySlug === 'craftsmen';
+  const isDriver = categorySlug === 'drivers';
+  const showRating = isCraftsman || isDriver;
   return (
     <div
       className="glass-card glass-card-hover rounded-2xl overflow-hidden animate-fade-up relative"
@@ -312,6 +345,11 @@ function ListingCard({
           }`}>
             {listing.is_open ? 'مفتوح الآن' : 'مغلق'}
           </div>
+          {isPharmacy && listing.is_24_7 && (
+            <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur bg-blue-500/80 text-white flex items-center gap-1">
+              <Clock size={10} /> 24/7
+            </div>
+          )}
         </button>
       )}
       <div className="p-5">
@@ -356,6 +394,64 @@ function ListingCard({
             </span>
           )}
         </div>
+
+        {/* Rating for craftsmen/drivers */}
+        {showRating && listing.rating_count > 0 && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  size={12}
+                  className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-gold-300/60">{listing.rating_avg.toFixed(1)} ({listing.rating_count} تقييم)</span>
+          </div>
+        )}
+
+        {/* Event hall capacity & facilities */}
+        {isEventHall && (
+          <div className="mb-3 space-y-2">
+            {listing.capacity != null && (
+              <div className="flex items-center gap-1.5 text-xs text-gold-200/70">
+                <Users size={13} className="gold-text" />
+                السعة: {listing.capacity} شخص
+              </div>
+            )}
+            {listing.facilities.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {listing.facilities.map((f) => {
+                  const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
+                  return (
+                    <span key={f} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+                      <CheckCircle2 size={9} /> {label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Craftsmen/Drivers estimated pricing & wallet info */}
+        {(isCraftsman || isDriver) && listing.price != null && (
+          <div className="mb-3 p-2 rounded-lg bg-ink-600/40 border border-gold-400/10">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gold-200/60 flex items-center gap-1.5">
+                <DollarSign size={12} className="gold-text" /> سعر تقديري
+              </span>
+              <span className="text-gold-100 font-bold">{listing.price.toLocaleString()} ج.س</span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] mt-1.5 pt-1.5 border-t border-gold-400/10">
+              <span className="text-gold-300/50 flex items-center gap-1">
+                <Wallet size={10} /> رسوم المنصة (7%)
+              </span>
+              <span className="text-gold-300/70">{Math.round(listing.price * 0.07)} ج.س</span>
+            </div>
+          </div>
+        )}
 
         {/* Products preview */}
         {products.length > 0 && (
@@ -420,6 +516,16 @@ function ListingCard({
           )}
         </div>
 
+        {/* Event hall booking button */}
+        {isEventHall && (
+          <button
+            onClick={() => navigate(`/listing/${listing.id}`)}
+            className="w-full mt-3 flex items-center justify-center gap-2 text-sm btn-gold rounded-xl py-2.5 transition-all"
+          >
+            <Calendar size={15} /> طلب حجز القاعة
+          </button>
+        )}
+
         {/* Owner/Admin controls */}
         {(isOwner || isAdmin) && (
           <div className="flex gap-2 mt-4 pt-3 border-t border-gold-400/10">
@@ -444,6 +550,7 @@ function ListingCard({
 
 function EntityFormModal({
   categoryId,
+  categorySlug,
   categoryName,
   subcats,
   preselectedSub,
@@ -452,6 +559,7 @@ function EntityFormModal({
   onSaved,
 }: {
   categoryId: string;
+  categorySlug: string;
   categoryName: string;
   subcats: Subcategory[];
   preselectedSub: Subcategory | null;
@@ -461,6 +569,10 @@ function EntityFormModal({
 }) {
   const { user } = useAuth();
   const isEdit = !!existing;
+  const isPharmacy = categorySlug === 'health';
+  const isEventHall = categorySlug === 'events';
+  const isCraftsman = categorySlug === 'craftsmen';
+  const isDriver = categorySlug === 'drivers';
   const [form, setForm] = useState({
     title: existing?.title || '',
     description: existing?.description || '',
@@ -477,6 +589,9 @@ function EntityFormModal({
     service_radius: existing?.service_radius?.toString() || '',
     payment_methods: existing?.payment_methods || [],
     whatsapp: existing?.whatsapp || '',
+    is_24_7: existing?.is_24_7 ?? false,
+    capacity: existing?.capacity?.toString() || '',
+    facilities: existing?.facilities || [],
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: '', is_offer: false });
@@ -501,6 +616,15 @@ function EntityFormModal({
       payment_methods: f.payment_methods.includes(val)
         ? f.payment_methods.filter((m) => m !== val)
         : [...f.payment_methods, val],
+    }));
+  };
+
+  const toggleFacility = (val: string) => {
+    setForm((f) => ({
+      ...f,
+      facilities: f.facilities.includes(val)
+        ? f.facilities.filter((m) => m !== val)
+        : [...f.facilities, val],
     }));
   };
 
@@ -548,6 +672,9 @@ function EntityFormModal({
       service_radius: form.service_radius ? parseFloat(form.service_radius) : null,
       payment_methods: form.payment_methods,
       whatsapp: form.whatsapp,
+      is_24_7: form.is_24_7,
+      capacity: form.capacity ? parseInt(form.capacity) : null,
+      facilities: form.facilities,
     };
 
     let data: Listing | null = null;
@@ -740,6 +867,83 @@ function EntityFormModal({
               ))}
             </div>
           </div>
+
+          {/* Pharmacy: 24/7 toggle */}
+          {isPharmacy && (
+            <div className="glass-card rounded-xl p-4 border border-blue-500/20">
+              <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
+                <Clock size={14} className="text-blue-400" /> متاح 24 ساعة / 7 أيام
+              </label>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gold-100">صيدلية تعمل على مدار الساعة</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, is_24_7: !form.is_24_7 })}
+                  className={`w-12 h-6 rounded-full transition-all relative ${form.is_24_7 ? 'bg-blue-500/40' : 'bg-ink-600'}`}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${form.is_24_7 ? 'right-0.5 bg-blue-400' : 'right-6 bg-gold-200/40'}`} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Event Hall: capacity & facilities */}
+          {isEventHall && (
+            <>
+              <div>
+                <label className="block text-sm text-gold-200/70 mb-2 flex items-center gap-1.5">
+                  <Users size={14} className="gold-text" /> السعة (عدد الأشخاص)
+                </label>
+                <input
+                  type="number"
+                  value={form.capacity}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  placeholder="مثال: 300"
+                  className="input-dark w-full rounded-xl px-4 py-3"
+                />
+              </div>
+              <div className="glass-card rounded-xl p-4 border border-gold-400/15">
+                <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="gold-text" /> المرافق والخدمات
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {FACILITY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleFacility(opt.value)}
+                      className={`py-2.5 rounded-xl text-sm transition-all border ${
+                        form.facilities.includes(opt.value)
+                          ? 'bg-gold-400/15 text-gold-200 border-gold-400/40'
+                          : 'bg-ink-600/50 text-gold-200/40 border-gold-400/10'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Craftsmen/Drivers: estimated pricing note */}
+          {(isCraftsman || isDriver) && (
+            <div className="glass-card rounded-xl p-4 border border-gold-400/15">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet size={14} className="gold-text" />
+                <span className="text-sm text-gold-200/70">نظام رسوم المنصة</span>
+              </div>
+              <p className="text-xs text-gold-200/50 leading-relaxed">
+                يتم خصم رسوم المنصة (5-10%) من رصيد المحفظة عند إتمام كل طلب. تأكد من شحن محفظتك من لوحة التحكم.
+              </p>
+              {form.price && (
+                <div className="mt-2 pt-2 border-t border-gold-400/10 flex items-center justify-between text-xs">
+                  <span className="text-gold-300/60">السعر التقديري: {parseFloat(form.price).toLocaleString()} ج.س</span>
+                  <span className="text-gold-300/60">رسوم المنصة (~7%): {Math.round(parseFloat(form.price) * 0.07)} ج.س</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Images */}
           <div>
