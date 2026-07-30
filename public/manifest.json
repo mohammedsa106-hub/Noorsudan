@@ -1,0 +1,54 @@
+{
+  "name": "نور السودان - دليل الخدمات والأعمال",
+  "short_name": "نور السودان",
+  "description": "دليل الخدمات والأعمال في السودان - اسأل نور... وحياتك أسهل",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "lifestyle", "shopping", "navigation"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "اسأل نور",
+      "short_name": "اسأل نور",
+      "description": "ابدأ محادثة مع المساعد الذكي",
+      "url": "/?action=ask-nour"
+    },
+    {
+      "name": "لوحة التحكم",
+      "short_name": "لوحة التحكم",
+      "description": "إدارة إعلاناتك وملفك الشخصي",
+      "url": "/dashboard"
+    }
+  ]
+}
