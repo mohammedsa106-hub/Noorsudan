@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { supabase, type Listing, type Order, type Product, sectionHasPayments, isOpenNow, formatTime, safeArray, safeNum } from '@/lib/supabase';
+import { supabase, type Listing, type Order, sectionHasPayments, isOpenNow, formatTime } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
@@ -7,7 +7,7 @@ import {
   X, Upload, MessageCircle, Phone, MapPin, Navigation, Clock,
   Truck, Star, Users, Calendar, Wallet, CheckCircle2, DollarSign,
   ShoppingBag, CreditCard, Briefcase, GraduationCap,
-  ShieldCheck, Crown, Zap, FileText, Heart,
+  ShieldCheck, Crown, Zap,
 } from 'lucide-react';
 import { FACILITY_OPTIONS } from '@/lib/supabase';
 
@@ -38,10 +38,6 @@ export function SectionCard({
   const hasPayments = sectionHasPayments(categorySlug);
   const coverImage = images[0] || listing.image_url;
   const offers = products.filter((p: Product) => p.is_offer);
-  const facilities = safeArray(listing.facilities);
-  const paymentMethods = safeArray(listing.payment_methods);
-  const ratingAvg = safeNum(listing.rating_avg);
-  const ratingCount = safeNum(listing.rating_count);
 
   return (
     <>
@@ -259,15 +255,15 @@ function SectionSpecificContent({ listing, slug, products, offers }: { listing: 
             <Users size={13} className="gold-text" /> السعة: {listing.capacity} شخص
           </div>
         )}
-        {facilities.length > 0 && (
+        {listing.facilities.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {facilities.slice(0, 4).map((f) => {
+            {listing.facilities.slice(0, 4).map((f) => {
               const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
               return <span key={f} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
                 <CheckCircle2 size={9} /> {label}
               </span>;
             })}
-            {facilities.length > 4 && <span className="text-[10px] text-gold-300/50">+{facilities.length - 4}</span>}
+            {listing.facilities.length > 4 && <span className="text-[10px] text-gold-300/50">+{listing.facilities.length - 4}</span>}
           </div>
         )}
       </div>
@@ -277,14 +273,14 @@ function SectionSpecificContent({ listing, slug, products, offers }: { listing: 
   if (slug === 'craftsmen' || slug === 'drivers') {
     return (
       <div className="mb-3 space-y-2">
-        {ratingCount > 0 && (
+        {listing.rating_count > 0 && (
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} size={12} className={n <= Math.round(ratingAvg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
+                <Star key={n} size={12} className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
               ))}
             </div>
-            <span className="text-xs text-gold-300/60">{ratingAvg.toFixed(1)} ({ratingCount})</span>
+            <span className="text-xs text-gold-300/60">{listing.rating_avg.toFixed(1)} ({listing.rating_count})</span>
           </div>
         )}
         {listing.price != null && (
@@ -323,9 +319,9 @@ function SectionSpecificContent({ listing, slug, products, offers }: { listing: 
           <Truck size={10} /> توصيل متاح
         </span>
       )}
-      {paymentMethods.length > 0 && (
+      {listing.payment_methods.length > 0 && (
         <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-          <CreditCard size={10} /> {paymentMethods.map((m) => m).join(' · ')}
+          <CreditCard size={10} /> {listing.payment_methods.map((m) => m).join(' · ')}
         </span>
       )}
       {products.length > 0 && (

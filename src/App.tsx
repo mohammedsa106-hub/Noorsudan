@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useRouter, matchRoute, navigate } from '@/lib/router';
 import { Header } from '@/components/Header';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthPage } from '@/pages/AuthPage';
 import { HomePage } from '@/pages/HomePage';
 import { CategoryPage } from '@/pages/CategoryPage';
@@ -12,6 +11,7 @@ import { ProfilePage, SettingsPage, HelpPage } from '@/pages/ProfilePages';
 import { ListingDetailPage } from '@/pages/ListingDetailPage';
 import { AskNourDrawer } from '@/components/AskNour';
 import { Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
 
 function AppRoutes() {
   const route = useRouter();
@@ -50,28 +50,26 @@ function AppRoutes() {
   }
 
 
-  const wrap = (el: React.ReactNode) => <ErrorBoundary key={route.path}>{el}</ErrorBoundary>;
-
   let content: React.ReactNode;
 
   if (route.path === '/' || route.path === '') {
-    content = wrap(<HomePage searchQuery={searchQuery} />);
+    content = <HomePage searchQuery={searchQuery} />;
   } else if (matchRoute(route.path, '/category/:slug')) {
     const { slug } = matchRoute(route.path, '/category/:slug')!;
-    content = wrap(<CategoryPage slug={slug} />);
+    content = <CategoryPage slug={slug} />;
   } else if (matchRoute(route.path, '/listing/:id')) {
     const { id } = matchRoute(route.path, '/listing/:id')!;
-    content = wrap(<ListingDetailPage id={id} />);
+    content = <ListingDetailPage id={id} />;
   } else if (route.path === '/dashboard') {
-    content = wrap(<DashboardPage />);
+    content = <DashboardPage />;
   } else if (route.path === '/admin') {
-    content = wrap(<AdminPage />);
+    content = <AdminPage />;
   } else if (route.path === '/profile') {
-    content = wrap(<ProfilePage />);
+    content = <ProfilePage />;
   } else if (route.path === '/settings') {
-    content = wrap(<SettingsPage />);
+    content = <SettingsPage />;
   } else if (route.path === '/help') {
-    content = wrap(<HelpPage />);
+    content = <HelpPage />;
   } else {
     content = (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -84,23 +82,21 @@ function AppRoutes() {
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen">
-        <Header onSearch={setSearchQuery} />
-        {content}
+    <div className="min-h-screen">
+      <Header onSearch={setSearchQuery} />
+      {content}
 
-        {/* Floating Ask Nour button */}
-        <button
-          onClick={() => setAskOpen(true)}
-          className="fixed bottom-6 left-6 z-[80] w-14 h-14 rounded-full btn-gold flex items-center justify-center shadow-2xl hover:scale-110 transition-transform animate-pulse-glow"
-          aria-label="اسأل نور"
-        >
-          <Sparkles size={26} />
-        </button>
+      {/* Floating Ask Nour button */}
+      <button
+        onClick={() => setAskOpen(true)}
+        className="fixed bottom-6 left-6 z-[80] w-14 h-14 rounded-full btn-gold flex items-center justify-center shadow-2xl hover:scale-110 transition-transform animate-pulse-glow"
+        aria-label="اسأل نور"
+      >
+        <Sparkles size={26} />
+      </button>
 
-        <AskNourDrawer open={askOpen} onClose={() => setAskOpen(false)} />
-      </div>
-    </ErrorBoundary>
+      <AskNourDrawer open={askOpen} onClose={() => setAskOpen(false)} />
+    </div>
   );
 }
 

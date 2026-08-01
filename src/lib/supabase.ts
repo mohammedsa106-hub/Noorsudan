@@ -67,14 +67,14 @@ export interface Listing {
   is_open: boolean;
   delivery_available: boolean;
   service_radius: number | null;
-  payment_methods: string[] | null;
+  payment_methods: string[];
   whatsapp: string;
   is_hidden_by_admin: boolean;
   is_24_7: boolean;
   capacity: number | null;
-  facilities: string[] | null;
-  rating_avg: number | null;
-  rating_count: number | null;
+  facilities: string[];
+  rating_avg: number;
+  rating_count: number;
   opening_time: string | null;
   closing_time: string | null;
   bankak_account: string;
@@ -216,18 +216,6 @@ export const SECTIONS_WITHOUT_PAYMENTS = [
   'community', 'craftsmen', 'business-jobs', 'government', 'education', 'finance', 'marketing',
 ];
 
-export function safeArray<T>(val: T[] | null | undefined): T[] {
-  return Array.isArray(val) ? val : [];
-}
-
-export function safeNum(val: number | null | undefined, fallback = 0): number {
-  return typeof val === 'number' && !isNaN(val) ? val : fallback;
-}
-
-export function safeStr(val: string | null | undefined): string {
-  return typeof val === 'string' ? val : '';
-}
-
 export function sectionHasPayments(slug: string): boolean {
   return SECTIONS_WITH_PAYMENTS.includes(slug);
 }
@@ -251,9 +239,8 @@ export function isOpenNow(listing: Listing): boolean {
   const cur = now.getHours() * 60 + now.getMinutes();
   const [oh, om] = listing.opening_time.split(':').map(Number);
   const [ch, cm] = listing.closing_time.split(':').map(Number);
-  if (isNaN(oh) || isNaN(ch)) return listing.is_open;
-  const open = oh * 60 + (om || 0);
-  const close = ch * 60 + (cm || 0);
+  const open = oh * 60 + om;
+  const close = ch * 60 + cm;
   if (close > open) return cur >= open && cur < close;
   return cur >= open || cur < close;
 }

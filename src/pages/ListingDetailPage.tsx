@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase, type Listing, type ListingImage, type Category, type Subcategory, type Profile, type Product, type Job, type TrainingProgram, PAYMENT_METHOD_OPTIONS, FACILITY_OPTIONS, sectionHasPayments, safeArray, safeNum } from '@/lib/supabase';
+import { supabase, type Listing, type ListingImage, type Category, type Subcategory, type Profile, type Product, type Job, type TrainingProgram, PAYMENT_METHOD_OPTIONS, FACILITY_OPTIONS, sectionHasPayments } from '@/lib/supabase';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
 import { ImageGallery } from '@/components/ImageGallery';
@@ -95,10 +95,6 @@ export function ListingDetailPage({ id }: { id: string }) {
   const hasPayments = category ? sectionHasPayments(category.slug) : false;
   const isOwner = listing.owner_id === user?.id;
   const isCommunity = category?.slug === 'community';
-  const facilities = safeArray(listing.facilities);
-  const paymentMethods = safeArray(listing.payment_methods);
-  const ratingAvg = safeNum(listing.rating_avg);
-  const ratingCount = safeNum(listing.rating_count);
 
   return (
     <div className="min-h-screen max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -167,28 +163,28 @@ export function ListingDetailPage({ id }: { id: string }) {
               <MapPin size={12} /> نطاق {listing.service_radius} كم
             </span>
           )}
-          {paymentMethods.length > 0 && (
+          {listing.payment_methods.length > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gold-400/10 text-gold-300">
-              <CreditCard size={12} /> {paymentMethods.map((m) => PAYMENT_METHOD_OPTIONS.find((o) => o.value === m)?.label || m).join(' · ')}
+              <CreditCard size={12} /> {listing.payment_methods.map((m) => PAYMENT_METHOD_OPTIONS.find((o) => o.value === m)?.label || m).join(' · ')}
             </span>
           )}
         </div>
 
         {/* Rating for craftsmen/drivers */}
-        {(category?.slug === 'craftsmen' || category?.slug === 'drivers') && ratingCount > 0 && (
+        {(category?.slug === 'craftsmen' || category?.slug === 'drivers') && listing.rating_count > 0 && (
           <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-ink-600/40 border border-gold-400/10">
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} size={16} className={n <= Math.round(ratingAvg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
+                <Star key={n} size={16} className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
               ))}
             </div>
-            <span className="text-sm text-gold-100 font-bold">{ratingAvg.toFixed(1)}</span>
-            <span className="text-xs text-gold-300/50">({ratingCount} تقييم)</span>
+            <span className="text-sm text-gold-100 font-bold">{listing.rating_avg.toFixed(1)}</span>
+            <span className="text-xs text-gold-300/50">({listing.rating_count} تقييم)</span>
           </div>
         )}
 
         {/* Event hall capacity & facilities */}
-        {category?.slug === 'events' && (listing.capacity != null || facilities.length > 0) && (
+        {category?.slug === 'events' && (listing.capacity != null || listing.facilities.length > 0) && (
           <div className="mb-4 p-4 rounded-xl bg-ink-600/40 border border-gold-400/10 space-y-3">
             {listing.capacity != null && (
               <div className="flex items-center gap-2 text-sm text-gold-100">
@@ -196,9 +192,9 @@ export function ListingDetailPage({ id }: { id: string }) {
                 السعة: <span className="font-bold">{listing.capacity} شخص</span>
               </div>
             )}
-            {facilities.length > 0 && (
+            {listing.facilities.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {facilities.map((f) => {
+                {listing.facilities.map((f) => {
                   const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
                   return (
                     <span key={f} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gold-400/10 text-gold-300">

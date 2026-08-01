@@ -15,7 +15,7 @@ export function AdminPage() {
   const { user, profile, loading } = useAuth();
   const [tab, setTab] = useState<'overview' | 'listings' | 'users' | 'wallets' | 'verifications' | 'orders'>('overview');
   const [viewMode, setViewMode] = useState<ViewMode>('admin');
-  const [stats, setStats] = useState({ totalUsers: 0, byRole: {} as Record<string, number>, totalListings: 0, activeListings: 0, hiddenListings: 0, totalWalletBalance: 0, pendingVerifications: 0, pendingOrders: 0 });
+  const [stats, setStats] = useState({ totalUsers: 0, byRole: {} as Record<string, number>, totalListings: 0, activeListings: 0, hiddenListings: 0, totalWalletBalance: 0, pendingVerifications: 0 });
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
