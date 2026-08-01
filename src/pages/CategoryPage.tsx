@@ -4,16 +4,17 @@ import { useAuth } from '@/context/AuthContext';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
 import {
-  Phone, MapPin, X, Tag, DollarSign,
-  ChevronLeft, Edit2, Trash2,
-  MapPinned, Navigation, ExternalLink, LayoutGrid,
-  Plus, Truck, MessageCircle, Clock, CreditCard,
-  ShoppingBag, Star, Users, Calendar, Wallet, CheckCircle2,
+  Tag,
+  ChevronLeft,
+  MapPinned, LayoutGrid,
+  Plus, Truck, Clock, CreditCard,
+  ShoppingBag, Star, Users, Wallet, CheckCircle2, Briefcase,
 } from 'lucide-react';
 import { MapPicker } from '@/components/MapPicker';
 import { ImageUploader, type ImageItem } from '@/components/ImageUploader';
-import { supabase as supaClient } from '@/lib/supabase';
+import { supabase as supaClient, sectionHasPayments } from '@/lib/supabase';
 import type { ListingImage } from '@/lib/supabase';
+import { SectionCard } from '@/components/SectionTemplates';
 
 export function CategoryPage({ slug }: { slug: string }) {
   const { user, profile } = useAuth();
@@ -258,7 +259,7 @@ export function CategoryPage({ slug }: { slug: string }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {visibleListings.map((l, i) => (
-              <ListingCard
+              <SectionCard
                 key={l.id}
                 listing={l}
                 categorySlug={slug}
@@ -292,262 +293,6 @@ export function CategoryPage({ slug }: { slug: string }) {
   );
 }
 
-function ListingCard({
-  listing,
-  categorySlug,
-  subName,
-  isOwner,
-  isAdmin,
-  onEdit,
-  onDelete,
-  index,
-  images,
-  products,
-}: {
-  listing: Listing;
-  categorySlug: string;
-  subName?: string;
-  isOwner: boolean;
-  isAdmin: boolean;
-  onEdit: () => void;
-  onDelete: (id: string) => void;
-  index: number;
-  images: string[];
-  products: Product[];
-}) {
-  const hasGps = listing.lat != null && listing.lng != null;
-  const coverImage = images[0] || listing.image_url;
-  const offers = products.filter((p) => p.is_offer);
-  const isPharmacy = categorySlug === 'health';
-  const isEventHall = categorySlug === 'events';
-  const isCraftsman = categorySlug === 'craftsmen';
-  const isDriver = categorySlug === 'drivers';
-  const showRating = isCraftsman || isDriver;
-  return (
-    <div
-      className="glass-card glass-card-hover rounded-2xl overflow-hidden animate-fade-up relative"
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
-      {coverImage && (
-        <button
-          onClick={() => navigate(`/listing/${listing.id}`)}
-          className="block w-full h-40 overflow-hidden bg-ink-600 relative"
-        >
-          <img
-            src={coverImage}
-            alt={listing.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-            onError={(e) => (e.currentTarget.style.display = 'none')}
-          />
-          {/* Status badge */}
-          <div className={`absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur ${
-            listing.is_open ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'
-          }`}>
-            {listing.is_open ? 'مفتوح الآن' : 'مغلق'}
-          </div>
-          {isPharmacy && listing.is_24_7 && (
-            <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur bg-blue-500/80 text-white flex items-center gap-1">
-              <Clock size={10} /> 24/7
-            </div>
-          )}
-        </button>
-      )}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div>
-            {subName && (
-              <span className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300 mb-1">
-                {subName}
-              </span>
-            )}
-            <h3 className="font-bold text-gold-50 line-clamp-1">{listing.title}</h3>
-          </div>
-          {listing.price != null && (
-            <div className="flex items-center gap-1 text-gold-300 font-bold text-sm shrink-0">
-              <DollarSign size={14} />
-              {listing.price.toLocaleString()}
-            </div>
-          )}
-        </div>
-
-        {listing.description && (
-          <p className="text-sm text-gold-200/60 mb-3 line-clamp-2 min-h-[2.5rem]">
-            {listing.description}
-          </p>
-        )}
-
-        {/* Operational badges */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {listing.delivery_available && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
-              <Truck size={10} /> توصيل متاح
-            </span>
-          )}
-          {listing.service_radius != null && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-              <MapPin size={10} /> نطاق {listing.service_radius} كم
-            </span>
-          )}
-          {listing.payment_methods.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-              <CreditCard size={10} /> {listing.payment_methods.map((m) => PAYMENT_METHOD_OPTIONS.find((o) => o.value === m)?.label || m).join(' · ')}
-            </span>
-          )}
-        </div>
-
-        {/* Rating for craftsmen/drivers */}
-        {showRating && listing.rating_count > 0 && (
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Star
-                  key={n}
-                  size={12}
-                  className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'}
-                />
-              ))}
-            </div>
-            <span className="text-xs text-gold-300/60">{listing.rating_avg.toFixed(1)} ({listing.rating_count} تقييم)</span>
-          </div>
-        )}
-
-        {/* Event hall capacity & facilities */}
-        {isEventHall && (
-          <div className="mb-3 space-y-2">
-            {listing.capacity != null && (
-              <div className="flex items-center gap-1.5 text-xs text-gold-200/70">
-                <Users size={13} className="gold-text" />
-                السعة: {listing.capacity} شخص
-              </div>
-            )}
-            {listing.facilities.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {listing.facilities.map((f) => {
-                  const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
-                  return (
-                    <span key={f} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-                      <CheckCircle2 size={9} /> {label}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Craftsmen/Drivers estimated pricing & wallet info */}
-        {(isCraftsman || isDriver) && listing.price != null && (
-          <div className="mb-3 p-2 rounded-lg bg-ink-600/40 border border-gold-400/10">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gold-200/60 flex items-center gap-1.5">
-                <DollarSign size={12} className="gold-text" /> سعر تقديري
-              </span>
-              <span className="text-gold-100 font-bold">{listing.price.toLocaleString()} ج.س</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] mt-1.5 pt-1.5 border-t border-gold-400/10">
-              <span className="text-gold-300/50 flex items-center gap-1">
-                <Wallet size={10} /> رسوم المنصة (7%)
-              </span>
-              <span className="text-gold-300/70">{Math.round(listing.price * 0.07)} ج.س</span>
-            </div>
-          </div>
-        )}
-
-        {/* Products preview */}
-        {products.length > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5 text-[10px] text-gold-300/60 mb-1.5">
-              <ShoppingBag size={11} /> {products.length} منتج/خدمة
-              {offers.length > 0 && (
-                <span className="text-green-400 flex items-center gap-0.5">
-                  · <Star size={9} /> {offers.length} عرض خاص
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Contact info */}
-        <div className="space-y-2 text-xs text-gold-200/80 border-t border-gold-400/10 pt-3">
-          {listing.phone ? (
-            <a href={`tel:${listing.phone}`} className="flex items-center gap-2 hover:text-gold-200 transition-colors group">
-              <span className="w-7 h-7 rounded-lg bg-gold-400/10 flex items-center justify-center group-hover:bg-gold-400/20 transition-all">
-                <Phone size={13} className="gold-text" />
-              </span>
-              <span dir="ltr">{listing.phone}</span>
-            </a>
-          ) : null}
-
-          {listing.whatsapp ? (
-            <a
-              href={`https://wa.me/${listing.whatsapp.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-green-400 transition-colors group"
-            >
-              <span className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-all">
-                <MessageCircle size={13} className="text-green-400" />
-              </span>
-              <span>واتساب مباشر</span>
-            </a>
-          ) : null}
-
-          {listing.location_text && (
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-lg bg-gold-400/10 flex items-center justify-center shrink-0">
-                <MapPin size={13} className="gold-text" />
-              </span>
-              <span className="line-clamp-1">{listing.location_text}</span>
-            </div>
-          )}
-
-          {hasGps && (
-            <button
-              onClick={() => navigate(`/listing/${listing.id}`)}
-              className="flex items-center gap-2 gold-text hover:underline transition-all group w-full"
-            >
-              <span className="w-7 h-7 rounded-lg bg-gold-400/10 flex items-center justify-center group-hover:bg-gold-400/20 transition-all shrink-0">
-                <Navigation size={13} />
-              </span>
-              <span className="flex items-center gap-1">
-                عرض الموقع على الخريطة <ExternalLink size={11} />
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Event hall booking button */}
-        {isEventHall && (
-          <button
-            onClick={() => navigate(`/listing/${listing.id}`)}
-            className="w-full mt-3 flex items-center justify-center gap-2 text-sm btn-gold rounded-xl py-2.5 transition-all"
-          >
-            <Calendar size={15} /> طلب حجز القاعة
-          </button>
-        )}
-
-        {/* Owner/Admin controls */}
-        {(isOwner || isAdmin) && (
-          <div className="flex gap-2 mt-4 pt-3 border-t border-gold-400/10">
-            <button
-              onClick={onEdit}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs gold-text border border-gold-400/20 hover:border-gold-400/50 hover:bg-gold-400/10 rounded-lg py-2 transition-all"
-            >
-              <Edit2 size={13} /> تعديل
-            </button>
-            <button
-              onClick={() => onDelete(listing.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-red-400/70 hover:text-red-400 border border-red-500/20 hover:border-red-500/50 hover:bg-red-500/10 rounded-lg py-2 transition-all"
-            >
-              <Trash2 size={13} /> حذف
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function EntityFormModal({
   categoryId,
   categorySlug,
@@ -573,6 +318,9 @@ function EntityFormModal({
   const isEventHall = categorySlug === 'events';
   const isCraftsman = categorySlug === 'craftsmen';
   const isDriver = categorySlug === 'drivers';
+  const isCompany = categorySlug === 'business-jobs';
+  const isCommunity = categorySlug === 'community';
+  const hasPayments = sectionHasPayments(categorySlug);
   const [form, setForm] = useState({
     title: existing?.title || '',
     description: existing?.description || '',
@@ -592,6 +340,10 @@ function EntityFormModal({
     is_24_7: existing?.is_24_7 ?? false,
     capacity: existing?.capacity?.toString() || '',
     facilities: existing?.facilities || [],
+    opening_time: existing?.opening_time || '',
+    closing_time: existing?.closing_time || '',
+    bankak_account: existing?.bankak_account || '',
+    bankak_name: existing?.bankak_name || '',
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: '', is_offer: false });
@@ -675,6 +427,10 @@ function EntityFormModal({
       is_24_7: form.is_24_7,
       capacity: form.capacity ? parseInt(form.capacity) : null,
       facilities: form.facilities,
+      opening_time: form.opening_time || null,
+      closing_time: form.closing_time || null,
+      bankak_account: form.bankak_account,
+      bankak_name: form.bankak_name,
     };
 
     let data: Listing | null = null;
@@ -845,28 +601,78 @@ function EntityFormModal({
             />
           </div>
 
-          {/* Payment Methods */}
-          <div className="glass-card rounded-xl p-4 border border-gold-400/15">
-            <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
-              <CreditCard size={14} className="gold-text" /> طرق الدفع المقبولة
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHOD_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => togglePayment(opt.value)}
-                  className={`py-2.5 rounded-xl text-sm transition-all border ${
-                    form.payment_methods.includes(opt.value)
-                      ? 'bg-gold-400/15 text-gold-200 border-gold-400/40'
-                      : 'bg-ink-600/50 text-gold-200/40 border-gold-400/10'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {/* Working Hours (restaurants and similar) */}
+          {(categorySlug === 'restaurants' || categorySlug === 'health' || categorySlug === 'beauty') && (
+            <div className="glass-card rounded-xl p-4 border border-gold-400/15">
+              <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
+                <Clock size={14} className="gold-text" /> ساعات العمل
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-xs text-gold-300/50 mb-1 block">وقت الفتح</span>
+                  <input type="time" value={form.opening_time} onChange={(e) => setForm({ ...form, opening_time: e.target.value })}
+                    className="input-dark w-full rounded-xl px-4 py-3" />
+                </div>
+                <div>
+                  <span className="text-xs text-gold-300/50 mb-1 block">وقت الإغلاق</span>
+                  <input type="time" value={form.closing_time} onChange={(e) => setForm({ ...form, closing_time: e.target.value })}
+                    className="input-dark w-full rounded-xl px-4 py-3" />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Payment Methods — only for payment-enabled sections */}
+          {hasPayments && !isCommunity && (
+            <div className="glass-card rounded-xl p-4 border border-gold-400/15">
+              <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
+                <CreditCard size={14} className="gold-text" /> طرق الدفع المقبولة
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => togglePayment(opt.value)}
+                    className={`py-2.5 rounded-xl text-sm transition-all border ${
+                      form.payment_methods.includes(opt.value)
+                        ? 'bg-gold-400/15 text-gold-200 border-gold-400/40'
+                        : 'bg-ink-600/50 text-gold-200/40 border-gold-400/10'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bankak P2P Payment — only for payment-enabled sections */}
+          {hasPayments && !isCommunity && (
+            <div className="glass-card rounded-xl p-4 border border-gold-400/20">
+              <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
+                <Wallet size={14} className="gold-text" /> بيانات بنكاك للاستلام
+              </label>
+              <p className="text-xs text-gold-200/40 mb-3">أدخل بيانات حسابك في بنكاك لكي يتمكن العملاء من تحويل المبلغ مباشرة عند الطلب</p>
+              <div className="space-y-2">
+                <input value={form.bankak_name} onChange={(e) => setForm({ ...form, bankak_name: e.target.value })}
+                  placeholder="اسم صاحب الحساب" className="input-dark w-full rounded-xl px-4 py-3" />
+                <input value={form.bankak_account} onChange={(e) => setForm({ ...form, bankak_account: e.target.value })}
+                  placeholder="رقم/حساب بنكاك" className="input-dark w-full rounded-xl px-4 py-3" dir="ltr" />
+              </div>
+            </div>
+          )}
+
+          {/* Community section: no payments notice */}
+          {isCommunity && (
+            <div className="glass-card rounded-xl p-4 border border-red-500/20 bg-red-500/5">
+              <div className="flex items-center gap-2">
+                <Icon name="Heart" size={16} className="text-red-400" />
+                <span className="text-sm text-red-400">هذا القسم مخصص للعمل الإنساني والتطوع والتبرع بالعين فقط</span>
+              </div>
+              <p className="text-xs text-gold-200/40 mt-1">لا توجد مدفوعات أو حسابات بنكية في هذا القسم</p>
+            </div>
+          )}
 
           {/* Pharmacy: 24/7 toggle */}
           {isPharmacy && (
@@ -934,7 +740,7 @@ function EntityFormModal({
                 <span className="text-sm text-gold-200/70">نظام رسوم المنصة</span>
               </div>
               <p className="text-xs text-gold-200/50 leading-relaxed">
-                يتم خصم رسوم المنصة (5-10%) من رصيد المحفظة عند إتمام كل طلب. تأكد من شحن محفظتك من لوحة التحكم.
+                يتم خصم رسوم رمزية (5-10%) من رصيد المحفظة عند إتمام كل طلب. تأكد من شحن محفظتك من لوحة التحكم.
               </p>
               {form.price && (
                 <div className="mt-2 pt-2 border-t border-gold-400/10 flex items-center justify-between text-xs">
@@ -942,6 +748,19 @@ function EntityFormModal({
                   <span className="text-gold-300/60">رسوم المنصة (~7%): {Math.round(parseFloat(form.price) * 0.07)} ج.س</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Companies: jobs & training note */}
+          {isCompany && (
+            <div className="glass-card rounded-xl p-4 border border-gold-400/15">
+              <div className="flex items-center gap-2 mb-2">
+                <Briefcase size={14} className="gold-text" />
+                <span className="text-sm text-gold-200/70">وظائف وتدريب</span>
+              </div>
+              <p className="text-xs text-gold-200/50 leading-relaxed">
+                يمكنك إضافة وظائف وبرامج تدريبية لشركتك من صفحة التفاصيل بعد نشر التسجيل. سيتمكن المتقدمون من رفع سيرتهم الذاتية (CV) مباشرة.
+              </p>
             </div>
           )}
 
@@ -963,10 +782,10 @@ function EntityFormModal({
             />
           </div>
 
-          {/* Products / Offers Catalog */}
+          {/* Products / Menu / Offers Catalog */}
           <div className="glass-card rounded-xl p-4 border border-gold-400/15">
             <label className="text-sm text-gold-200/70 mb-3 block flex items-center gap-1.5">
-              <ShoppingBag size={14} className="gold-text" /> كتالوج المنتجات / الخدمات / العروض
+              <ShoppingBag size={14} className="gold-text" /> {categorySlug === 'restaurants' ? 'منيو الطعام' : 'كتالوج المنتجات / الخدمات / العروض'}
             </label>
             {products.length > 0 && (
               <div className="space-y-2 mb-3">

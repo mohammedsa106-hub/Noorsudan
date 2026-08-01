@@ -1,27 +1,28 @@
 import { useEffect, useState } from 'react';
-import { supabase, type Profile, type Listing, type Category, type Subcategory, type Wallet, type Verification, type AccountType, ACCOUNT_TYPE_LABELS } from '@/lib/supabase';
+import { supabase, type Profile, type Listing, type Category, type Subcategory, type Wallet, type Verification, type Order, type AccountType, ACCOUNT_TYPE_LABELS } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
 import {
   ShieldCheck, Eye, EyeOff, Trash2, Check, X,
   ChevronLeft, BadgeCheck, UserX, UserCheck, Wallet, TrendingUp,
-  Search
+  Search, Crown, Zap, FileText, ShoppingBag
 } from 'lucide-react';
 
 type ViewMode = 'admin' | 'customer' | 'business' | 'craftsman' | 'driver';
 
 export function AdminPage() {
   const { user, profile, loading } = useAuth();
-  const [tab, setTab] = useState<'overview' | 'listings' | 'users' | 'wallets' | 'verifications'>('overview');
+  const [tab, setTab] = useState<'overview' | 'listings' | 'users' | 'wallets' | 'verifications' | 'orders'>('overview');
   const [viewMode, setViewMode] = useState<ViewMode>('admin');
-  const [stats, setStats] = useState({ totalUsers: 0, byRole: {} as Record<string, number>, totalListings: 0, activeListings: 0, hiddenListings: 0, totalWalletBalance: 0, pendingVerifications: 0 });
+  const [stats, setStats] = useState({ totalUsers: 0, byRole: {} as Record<string, number>, totalListings: 0, activeListings: 0, hiddenListings: 0, totalWalletBalance: 0, pendingVerifications: 0, pendingOrders: 0 });
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcats, setSubcats] = useState<Subcategory[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -30,13 +31,14 @@ export function AdminPage() {
   }, [profile]);
 
   const loadAll = async () => {
-    const [usersRes, listingsRes, catsRes, subsRes, walletsRes, verifsRes] = await Promise.all([
+    const [usersRes, listingsRes, catsRes, subsRes, walletsRes, verifsRes, ordersRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('listings').select('*').order('created_at', { ascending: false }),
       supabase.from('categories').select('*').order('sort_order'),
       supabase.from('subcategories').select('*').order('sort_order'),
       supabase.from('wallets').select('*'),
       supabase.from('verifications').select('*').eq('status', 'pending').order('submitted_at', { ascending: false }),
+      supabase.from('orders').select('*').order('created_at', { ascending: false }),
     ]);
 
     const users = (usersRes.data as Profile[]) || [];
@@ -50,6 +52,7 @@ export function AdminPage() {
     setSubcats((subsRes.data as Subcategory[]) || []);
     setWallets(wals);
     setVerifications(verifs);
+    setOrders((ordersRes.data as Order[]) || []);
 
     const byRole: Record<string, number> = {};
     users.forEach((u) => { byRole[u.account_type] = (byRole[u.account_type] || 0) + 1; });
@@ -62,6 +65,7 @@ export function AdminPage() {
       hiddenListings: listings.filter((l) => l.is_hidden_by_admin).length,
       totalWalletBalance: wals.reduce((sum, w) => sum + w.balance, 0),
       pendingVerifications: verifs.length,
+      pendingOrders: (ordersRes.data as Order[] || []).filter((o) => o.status === 'pending').length,
     });
   };
 
@@ -135,6 +139,23 @@ export function AdminPage() {
     setWallets((prev) => prev.map((w) => (w.id === wallet!.id ? { ...w, balance: newBalance } : w)));
   };
 
+  const toggleFeatured = async (l: Listing) => {
+    const newFeatured = !l.is_featured;
+    await supabase.from('listings').update({ is_featured: newFeatured }).eq('id', l.id);
+    setAllListings((prev) => prev.map((x) => (x.id === l.id ? { ...x, is_featured: newFeatured } : x)));
+  };
+
+  const toggleSponsored = async (l: Listing) => {
+    const newSponsored = !l.is_sponsored;
+    await supabase.from('listings').update({ is_sponsored: newSponsored }).eq('id', l.id);
+    setAllListings((prev) => prev.map((x) => (x.id === l.id ? { ...x, is_sponsored: newSponsored } : x)));
+  };
+
+  const confirmOrder = async (orderId: string, status: 'confirmed' | 'rejected') => {
+    await supabase.from('orders').update({ status }).eq('id', orderId);
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+  };
+
   const filteredListings = search.trim()
     ? allListings.filter((l) => l.title.includes(search.trim()) || l.description.includes(search.trim()))
     : allListings;
@@ -146,6 +167,7 @@ export function AdminPage() {
     { key: 'overview' as const, label: 'نظرة عامة', icon: 'LayoutDashboard' },
     { key: 'listings' as const, label: `التسجيلات (${allListings.length})`, icon: 'Tag' },
     { key: 'users' as const, label: `المستخدمون (${allUsers.length})`, icon: 'Users' },
+    { key: 'orders' as const, label: `الطلبات (${stats.pendingOrders || 0})`, icon: 'ShoppingBag' },
     { key: 'wallets' as const, label: 'المحافظ', icon: 'Wallet' },
     { key: 'verifications' as const, label: `التحقق (${stats.pendingVerifications})`, icon: 'BadgeCheck' },
   ];
@@ -303,6 +325,12 @@ export function AdminPage() {
                       {owner && <p className="text-[10px] text-gold-300/40 mt-1">بواسطة: {owner.full_name}</p>}
                     </div>
                     <div className="flex gap-1 shrink-0">
+                      <button onClick={() => toggleFeatured(l)} className={`p-2 rounded-lg hover:bg-gold-400/10 ${l.is_featured ? 'text-gold-300' : 'text-gold-300/30'}`} title="مميز">
+                        <Crown size={15} />
+                      </button>
+                      <button onClick={() => toggleSponsored(l)} className={`p-2 rounded-lg hover:bg-gold-400/10 ${l.is_sponsored ? 'text-purple-400' : 'text-gold-300/30'}`} title="إعلان ممول">
+                        <Zap size={15} />
+                      </button>
                       <button onClick={() => hideListing(l)} className="p-2 rounded-lg hover:bg-gold-400/10" title={l.is_hidden_by_admin ? 'إظهار' : 'إخفاء'}>
                         {l.is_hidden_by_admin ? <Eye size={15} className="gold-text" /> : <EyeOff size={15} className="text-gold-300/60" />}
                       </button>
@@ -349,6 +377,54 @@ export function AdminPage() {
                 </div>
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {tab === 'orders' && (
+        <div className="space-y-3">
+          {orders.length === 0 ? (
+            <p className="text-center py-12 text-gold-200/40">لا توجد طلبات بعد</p>
+          ) : (
+            orders.map((o) => {
+              const listing = allListings.find((l) => l.id === o.listing_id);
+              return (
+                <div key={o.id} className="glass-card rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center shrink-0">
+                      <ShoppingBag size={18} className="gold-text" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gold-50 text-sm">{listing?.title || 'طلب'}</h3>
+                      <p className="text-xs text-gold-300/50">العميل: {o.customer_name} · {o.customer_phone}</p>
+                      {o.notes && <p className="text-xs text-gold-200/50 mt-1">{o.notes}</p>}
+                      {o.receipt_url ? (
+                        <a href={o.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs gold-text hover:underline flex items-center gap-1 mt-1">
+                          <FileText size={11} /> عرض الإيصال
+                        </a>
+                      ) : (
+                        <p className="text-xs text-gold-300/40 mt-1">لم يتم رفع إيصال</p>
+                      )}
+                      <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1 ${
+                        o.status === 'pending' ? 'bg-gold-400/15 text-gold-300' : o.status === 'confirmed' ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {o.status === 'pending' ? 'بانتظار التأكيد' : o.status === 'confirmed' ? 'مؤكد' : 'مرفوض'}
+                      </span>
+                    </div>
+                    {o.status === 'pending' && (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => confirmOrder(o.id, 'confirmed')} className="p-2 rounded-lg bg-green-500/15 hover:bg-green-500/25" title="تأكيد">
+                          <Check size={16} className="text-green-400" />
+                        </button>
+                        <button onClick={() => confirmOrder(o.id, 'rejected')} className="p-2 rounded-lg bg-red-500/15 hover:bg-red-500/25" title="رفض">
+                          <X size={16} className="text-red-400" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}

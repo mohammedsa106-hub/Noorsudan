@@ -9,6 +9,7 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
   const { user, profile, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSearch, setMobileSearch] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [q, setQ] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -20,6 +21,12 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleSignOut = async () => {
@@ -36,7 +43,7 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 glass-card border-b border-gold-400/15">
+    <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'glass-card border-b border-gold-400/15 shadow-lg shadow-black/40' : 'bg-transparent border-b border-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
@@ -55,8 +62,8 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
 
           {/* Search - desktop */}
           <div className="hidden md:flex flex-1 max-w-xl">
-            <div className="relative w-full">
-              <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gold-300/50" />
+            <div className="relative w-full group">
+              <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gold-300/50 group-focus-within:text-gold-300 transition-colors" />
               <input
                 type="text"
                 value={q}
@@ -96,7 +103,7 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute left-0 mt-2 w-64 glass-card rounded-xl p-2 gold-glow animate-fade-up z-50">
+                  <div className="absolute left-0 mt-2 w-64 glass-card rounded-xl p-2 gold-glow animate-scale-in z-50 origin-top">
                     <div className="px-3 py-2 border-b border-gold-400/10 mb-1">
                       <div className="text-sm font-bold text-gold-100 truncate">
                         {profile?.full_name || 'مستخدم'}

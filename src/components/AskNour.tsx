@@ -181,17 +181,17 @@ export function AskNourDrawer({ open, onClose }: { open: boolean; onClose: () =>
     let suggestions: string[];
 
     if (results.length > 0) {
-      const openNote = wantOpen ? ' (مفتوح الآن)' : '';
-      reply = `وجدت ${results.length} نتيجة${openNote} في "${matchedCat?.name || 'بحثك'}". يمكنك التواصل معهم مباشرة:`;
+      const openNote = wantOpen ? ' (مفتوحين دلوقتي)' : '';
+      reply = `لا حولك يا زول! لقيت ليك ${results.length} نتيجة${openNote} في "${matchedCat?.name || 'بحثك'}". ده اللي عندي، تقدر تصل بيهم مباشرة:`;
       suggestions = matchedCat
         ? [`عرض كل ${matchedCat.name}`, results[0] ? `تفاصيل: ${results[0].listing.title}` : '']
           .filter(Boolean)
         : [];
     } else if (matchedCat) {
-      reply = `لم أجد تسجيلات متاحة${wantOpen ? ' ومفتوحة' : ''} في "${matchedCat.name}" حالياً. يمكنك تصفح القسم مباشرة أو جرّب كلمات أخرى.`;
-      suggestions = [`عرض كل ${matchedCat.name}`, 'البحث في أقسام أخرى'];
+      reply = `ما لقيت حاجة متاحة${wantOpen ? ' ومفتوحة' : ''} في "${matchedCat.name}" دلوقتي يا زول. بس تقدر تفرج في القسم مباشرة أو تجرب كلمات تانية.`;
+      suggestions = [`عرض كل ${matchedCat.name}`, 'دور في أقسام تانية'];
     } else {
-      reply = `لم أتمكن من تحديد القسم المناسب لبحثك. جرّب أن تكون أكثر تحديداً مثل: "صيدلية مفتوحة"، "حداد متاح"، "فندق في الخرطوم"، أو "وظائف شاغرة".`;
+      reply = `والله ما قدرت أحدد ليك القسم الصح من سؤالك. جرّب تكون أوضح شوية زي: "صيدلية مفتوحة"، "حداد متاح"، "فندق في الخرطوم"، أو "وظائف شاغرة".`;
       suggestions = QUICK_PROMPTS.slice(0, 3);
     }
 
@@ -224,7 +224,7 @@ export function AskNourDrawer({ open, onClose }: { open: boolean; onClose: () =>
             </div>
             <div>
               <h2 className="font-display text-lg font-bold gold-gradient-text">اسأل نور</h2>
-              <p className="text-[11px] text-gold-200/50">محرك بحث داخلي في دليل الخدمات</p>
+              <p className="text-[11px] text-gold-200/50">مساعدك الذكي في دليل السودان</p>
             </div>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-lg glass-card-hover flex items-center justify-center">
@@ -239,9 +239,9 @@ export function AskNourDrawer({ open, onClose }: { open: boolean; onClose: () =>
               <div className="w-16 h-16 rounded-2xl bg-gold-400/10 flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
                 <MessageCircle size={30} className="gold-text" />
               </div>
-              <p className="text-gold-100 font-bold mb-1">أهلاً بك في نور!</p>
+              <p className="text-gold-100 font-bold mb-1">أهلاً بيك يا زول في نور!</p>
               <p className="text-gold-200/50 text-sm mb-5">
-                ابحث في دليل الخدمات السودانية مباشرة — بدون إنترنت خارجي
+                اسألني عن أي خدمة في السودان وأنا أرشدك — بدون نت خارجي
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {QUICK_PROMPTS.map((q) => (
@@ -332,7 +332,7 @@ export function AskNourDrawer({ open, onClose }: { open: boolean; onClose: () =>
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="ابحث في الدليل..."
+              placeholder="اكتب سؤالك يا زول..."
               className="input-dark w-full rounded-xl py-3 pr-4 pl-4 text-sm"
               autoFocus
             />

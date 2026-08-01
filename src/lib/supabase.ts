@@ -67,14 +67,21 @@ export interface Listing {
   is_open: boolean;
   delivery_available: boolean;
   service_radius: number | null;
-  payment_methods: string[];
+  payment_methods: string[] | null;
   whatsapp: string;
   is_hidden_by_admin: boolean;
   is_24_7: boolean;
   capacity: number | null;
-  facilities: string[];
-  rating_avg: number;
-  rating_count: number;
+  facilities: string[] | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+  opening_time: string | null;
+  closing_time: string | null;
+  bankak_account: string;
+  bankak_name: string;
+  is_featured: boolean;
+  featured_until: string | null;
+  is_sponsored: boolean;
   created_at: string;
 }
 
@@ -122,6 +129,56 @@ export interface Verification {
   reviewed_at: string | null;
 }
 
+export interface Order {
+  id: string;
+  listing_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  notes: string;
+  receipt_url: string | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  created_at: string;
+}
+
+export interface Job {
+  id: string;
+  listing_id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  created_at: string;
+}
+
+export interface JobApplication {
+  id: string;
+  job_id: string;
+  applicant_id: string;
+  applicant_name: string;
+  applicant_phone: string;
+  cv_url: string;
+  created_at: string;
+}
+
+export interface TrainingProgram {
+  id: string;
+  listing_id: string;
+  title: string;
+  description: string;
+  duration: string;
+  created_at: string;
+}
+
+export interface TrainingApplication {
+  id: string;
+  training_id: string;
+  applicant_id: string;
+  applicant_name: string;
+  applicant_phone: string;
+  cv_url: string;
+  created_at: string;
+}
+
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   individual: 'مستخدم فردي',
   business: 'شركات وأعمال',
@@ -149,3 +206,54 @@ export const FACILITY_OPTIONS = [
   { value: 'projector', label: 'شاشة عرض' },
   { value: 'generator', label: 'مولد كهرباء' },
 ];
+
+export const SECTIONS_WITH_PAYMENTS = [
+  'restaurants', 'hotels', 'travel', 'groceries', 'cars', 'real-estate',
+  'events', 'beauty', 'agriculture', 'drivers',
+];
+
+export const SECTIONS_WITHOUT_PAYMENTS = [
+  'community', 'craftsmen', 'business-jobs', 'government', 'education', 'finance', 'marketing',
+];
+
+export function safeArray<T>(val: T[] | null | undefined): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
+export function safeNum(val: number | null | undefined, fallback = 0): number {
+  return typeof val === 'number' && !isNaN(val) ? val : fallback;
+}
+
+export function safeStr(val: string | null | undefined): string {
+  return typeof val === 'string' ? val : '';
+}
+
+export function sectionHasPayments(slug: string): boolean {
+  return SECTIONS_WITH_PAYMENTS.includes(slug);
+}
+
+export function formatTime(t: string | null): string {
+  if (!t) return '';
+  const parts = t.split(':');
+  if (parts.length < 2) return t;
+  const h = parseInt(parts[0]);
+  const m = parts[1];
+  const period = h >= 12 ? 'م' : 'ص';
+  const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${displayH}:${m} ${period}`;
+}
+
+export function isOpenNow(listing: Listing): boolean {
+  if (listing.is_24_7) return true;
+  if (!listing.is_open) return false;
+  if (!listing.opening_time || !listing.closing_time) return listing.is_open;
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = listing.opening_time.split(':').map(Number);
+  const [ch, cm] = listing.closing_time.split(':').map(Number);
+  if (isNaN(oh) || isNaN(ch)) return listing.is_open;
+  const open = oh * 60 + (om || 0);
+  const close = ch * 60 + (cm || 0);
+  if (close > open) return cur >= open && cur < close;
+  return cur >= open || cur < close;
+}
