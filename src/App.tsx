@@ -20,17 +20,16 @@ function AppRoutes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [askOpen, setAskOpen] = useState(false);
 
-  useEffect(() => {
-    const handler = (e: Event) => {
+      useEffect(() => {
+    const handler = () => {
       setAskOpen(true);
-      const detail = (e as CustomEvent).detail;
-      if (detail) {
-        window.dispatchEvent(new CustomEvent('ask-nour-prefill', { detail }));
-      }
     };
     window.addEventListener('open-ask-nour', handler);
     return () => window.removeEventListener('open-ask-nour', handler);
   }, []);
+
+    
+
 
   // Redirect away from /auth if already logged in
   useEffect(() => {
