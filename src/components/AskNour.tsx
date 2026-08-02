@@ -89,7 +89,7 @@ function isAskingForOpen(query: string): boolean {
   return /مفتوح|متاح|الآن|دلوقتي|حاليا/.test(query);
 }
 
-export function AskNourDrawer({ open, prefill, onClose }: { open: boolean; prefill?: string; onClose: () => void }) {
+export function AskNourDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -97,7 +97,6 @@ export function AskNourDrawer({ open, prefill, onClose }: { open: boolean; prefi
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [subcats, setSubcats] = useState<Record<string, Subcategory>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prefillHandled = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
@@ -108,6 +107,7 @@ export function AskNourDrawer({ open, prefill, onClose }: { open: boolean; prefi
       (data as Subcategory[] || []).forEach((s) => { map[s.id] = s; });
       setSubcats(map);
     });
+    // Load all active listings for internal search
     supabase.from('listings').select('*').eq('is_active', true).eq('is_hidden_by_admin', false).order('created_at', { ascending: false }).then(({ data }) => {
       setAllListings((data as Listing[]) || []);
     });
@@ -120,12 +120,15 @@ export function AskNourDrawer({ open, prefill, onClose }: { open: boolean; prefi
   }, [chat, thinking]);
 
   useEffect(() => {
-    if (open && prefill && prefill !== prefillHandled.current) {
-      prefillHandled.current = prefill;
-      const timer = setTimeout(() => askNour(prefill), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [open, prefill]);
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as string;
+      if (detail) {
+        setTimeout(() => askNour(detail), 300);
+      }
+    };
+    window.addEventListener('ask-nour-prefill', handler);
+    return () => window.removeEventListener('ask-nour-prefill', handler);
+  }, [allListings, categories]);
 
   const askNour = async (question: string) => {
     if (!question.trim() || thinking) return;
