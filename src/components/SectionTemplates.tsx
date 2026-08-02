@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { supabase, type Listing, type Order, sectionHasPayments, isOpenNow, formatTime } from '@/lib/supabase';
+import { supabase, type Listing, type Order, type Product, sectionHasPayments, isOpenNow, formatTime } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { navigate } from '@/lib/router';
 import { Icon } from '@/components/Icon';
@@ -7,7 +7,7 @@ import {
   X, Upload, MessageCircle, Phone, MapPin, Navigation, Clock,
   Truck, Star, Users, Calendar, Wallet, CheckCircle2, DollarSign,
   ShoppingBag, CreditCard, Briefcase, GraduationCap,
-  ShieldCheck, Crown, Zap,
+  ShieldCheck, Crown, Zap, FileText, Heart,
 } from 'lucide-react';
 import { FACILITY_OPTIONS } from '@/lib/supabase';
 
@@ -37,7 +37,10 @@ export function SectionCard({
   const [showOrder, setShowOrder] = useState(false);
   const hasPayments = sectionHasPayments(categorySlug);
   const coverImage = images[0] || listing.image_url;
-  const offers = products.filter((p: Product) => p.is_offer);
+  const safeProducts = Array.isArray(products) ? products : [];
+  const offers = safeProducts.filter((p: Product) => p.is_offer);
+  const safeFacilities = Array.isArray(listing.facilities) ? listing.facilities : [];
+  const safePaymentMethods = Array.isArray(listing.payment_methods) ? listing.payment_methods : [];
 
   return (
     <>
@@ -179,158 +182,169 @@ export function SectionCard({
 }
 
 function SectionSpecificContent({ listing, slug, products, offers }: { listing: Listing; slug: string; products: Product[]; offers: Product[] }) {
-  if (slug === 'restaurants') {
-    return (
-      <div className="mb-3 space-y-2">
-        <div className="flex flex-wrap gap-1.5">
-          {listing.delivery_available ? (
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeOffers = Array.isArray(offers) ? offers : [];
+  const safeFacilities = Array.isArray(listing?.facilities) ? listing.facilities : [];
+  const safePaymentMethods = Array.isArray(listing?.payment_methods) ? listing.payment_methods : [];
+  const safeRatingAvg = typeof listing?.rating_avg === 'number' ? listing.rating_avg : 0;
+  const safeRatingCount = typeof listing?.rating_count === 'number' ? listing.rating_count : 0;
+
+  try {
+    if (slug === 'restaurants') {
+      return (
+        <div className="mb-3 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {listing.delivery_available ? (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
+                <Truck size={10} /> توصيل
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+                <ShoppingBag size={10} /> استلام فقط
+              </span>
+            )}
+            {listing.opening_time && listing.closing_time && (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+                <Clock size={10} /> {formatTime(listing.opening_time)} - {formatTime(listing.closing_time)}
+              </span>
+            )}
+          </div>
+          {safeProducts.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-gold-300/60">
+              <ShoppingBag size={11} /> {safeProducts.length} صنف بالمنيو
+              {safeOffers.length > 0 && <span className="text-green-400">· {safeOffers.length} عرض خاص</span>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (slug === 'business-jobs') {
+      return (
+        <div className="mb-3 space-y-2">
+          {listing.description && <p className="text-xs text-gold-200/50 line-clamp-1">{listing.description}</p>}
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+              <Briefcase size={10} /> وظائف وخدمات
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+              <GraduationCap size={10} /> تدريب
+            </span>
+            {listing.email_contact && (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+                <FileText size={10} /> خدمة عملاء
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (slug === 'community') {
+      return (
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
+              <Heart size={10} /> عمل إنساني
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">
+              <ShieldCheck size={10} /> تطوع وتبرع بالعين
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+              <Icon name="Gift" size={10} /> بدون مدفوعات
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    if (slug === 'events') {
+      return (
+        <div className="mb-3 space-y-2">
+          {listing.capacity != null && (
+            <div className="flex items-center gap-1.5 text-xs text-gold-200/70">
+              <Users size={13} className="gold-text" /> السعة: {listing.capacity} شخص
+            </div>
+          )}
+          {safeFacilities.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {safeFacilities.slice(0, 4).map((f) => {
+                const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
+                return <span key={f} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+                  <CheckCircle2 size={9} /> {label}
+                </span>;
+              })}
+              {safeFacilities.length > 4 && <span className="text-[10px] text-gold-300/50">+{safeFacilities.length - 4}</span>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (slug === 'craftsmen' || slug === 'drivers') {
+      return (
+        <div className="mb-3 space-y-2">
+          {safeRatingCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star key={n} size={12} className={n <= Math.round(safeRatingAvg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
+                ))}
+              </div>
+              <span className="text-xs text-gold-300/60">{safeRatingAvg.toFixed(1)} ({safeRatingCount})</span>
+            </div>
+          )}
+          {listing.price != null && (
+            <div className="p-2 rounded-lg bg-ink-600/40 border border-gold-400/10">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gold-200/60 flex items-center gap-1.5"><DollarSign size={12} className="gold-text" /> سعر تقديري</span>
+                <span className="text-gold-100 font-bold">{listing.price.toLocaleString()} ج.س</span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] mt-1.5 pt-1.5 border-t border-gold-400/10">
+                <span className="text-gold-300/50 flex items-center gap-1"><Wallet size={10} /> رسوم المنصة (7%)</span>
+                <span className="text-gold-300/70">{Math.round(listing.price * 0.07)} ج.س</span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (slug === 'health') {
+      return (
+        <div className="mb-3">
+          {listing.is_24_7 && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
-              <Truck size={10} /> توصيل
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-              <ShoppingBag size={10} /> استلام فقط
-            </span>
-          )}
-          {listing.opening_time && listing.closing_time && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-              <Clock size={10} /> {formatTime(listing.opening_time)} - {formatTime(listing.closing_time)}
+              <Clock size={10} /> متاح 24/7
             </span>
           )}
         </div>
-        {products.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[10px] text-gold-300/60">
-            <ShoppingBag size={11} /> {products.length} صنف بالمنيو
-            {offers.length > 0 && <span className="text-green-400">· {offers.length} عرض خاص</span>}
-          </div>
-        )}
-      </div>
-    );
-  }
+      );
+    }
 
-  if (slug === 'business-jobs') {
+    // Default: generic badges
     return (
-      <div className="mb-3 space-y-2">
-        {listing.description && <p className="text-xs text-gold-200/50 line-clamp-1">{listing.description}</p>}
-        <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-            <Briefcase size={10} /> وظائف وخدمات
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-            <GraduationCap size={10} /> تدريب
-          </span>
-          {listing.email_contact && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-              <FileText size={10} /> خدمة عملاء
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (slug === 'community') {
-    return (
-      <div className="mb-3">
-        <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-            <Heart size={10} /> عمل إنساني
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">
-            <ShieldCheck size={10} /> تطوع وتبرع بالعين
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-            <Icon name="Gift" size={10} /> بدون مدفوعات
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (slug === 'events') {
-    return (
-      <div className="mb-3 space-y-2">
-        {listing.capacity != null && (
-          <div className="flex items-center gap-1.5 text-xs text-gold-200/70">
-            <Users size={13} className="gold-text" /> السعة: {listing.capacity} شخص
-          </div>
-        )}
-        {listing.facilities.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {listing.facilities.slice(0, 4).map((f) => {
-              const label = FACILITY_OPTIONS.find((o) => o.value === f)?.label || f;
-              return <span key={f} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-                <CheckCircle2 size={9} /> {label}
-              </span>;
-            })}
-            {listing.facilities.length > 4 && <span className="text-[10px] text-gold-300/50">+{listing.facilities.length - 4}</span>}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (slug === 'craftsmen' || slug === 'drivers') {
-    return (
-      <div className="mb-3 space-y-2">
-        {listing.rating_count > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} size={12} className={n <= Math.round(listing.rating_avg) ? 'text-gold-400 fill-gold-400' : 'text-gold-400/20'} />
-              ))}
-            </div>
-            <span className="text-xs text-gold-300/60">{listing.rating_avg.toFixed(1)} ({listing.rating_count})</span>
-          </div>
-        )}
-        {listing.price != null && (
-          <div className="p-2 rounded-lg bg-ink-600/40 border border-gold-400/10">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gold-200/60 flex items-center gap-1.5"><DollarSign size={12} className="gold-text" /> سعر تقديري</span>
-              <span className="text-gold-100 font-bold">{listing.price.toLocaleString()} ج.س</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] mt-1.5 pt-1.5 border-t border-gold-400/10">
-              <span className="text-gold-300/50 flex items-center gap-1"><Wallet size={10} /> رسوم المنصة (7%)</span>
-              <span className="text-gold-300/70">{Math.round(listing.price * 0.07)} ج.س</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (slug === 'health') {
-    return (
-      <div className="mb-3">
-        {listing.is_24_7 && (
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {listing.delivery_available && (
           <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
-            <Clock size={10} /> متاح 24/7
+            <Truck size={10} /> توصيل متاح
+          </span>
+        )}
+        {safePaymentMethods.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+            <CreditCard size={10} /> {safePaymentMethods.map((m) => m).join(' · ')}
+          </span>
+        )}
+        {safeProducts.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
+            <ShoppingBag size={10} /> {safeProducts.length} منتج
           </span>
         )}
       </div>
     );
+  } catch {
+    return <div className="mb-3 text-[10px] text-gold-200/30">—</div>;
   }
-
-  // Default: generic badges
-  return (
-    <div className="flex flex-wrap gap-1.5 mb-3">
-      {listing.delivery_available && (
-        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400">
-          <Truck size={10} /> توصيل متاح
-        </span>
-      )}
-      {listing.payment_methods.length > 0 && (
-        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-          <CreditCard size={10} /> {listing.payment_methods.map((m) => m).join(' · ')}
-        </span>
-      )}
-      {products.length > 0 && (
-        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gold-400/10 text-gold-300">
-          <ShoppingBag size={10} /> {products.length} منتج
-        </span>
-      )}
-    </div>
-  );
 }
 
 export function OrderModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {

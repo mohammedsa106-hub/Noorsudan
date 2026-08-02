@@ -37,38 +37,50 @@ export function CategoryPage({ slug }: { slug: string }) {
       .select('*')
       .eq('slug', slug)
       .maybeSingle()
-      .then(async ({ data: cat }) => {
-        if (!cat) {
+      .then(async ({ data: cat, error: catErr }) => {
+        if (catErr || !cat) {
           setCategory(null);
+          setSubcats([]);
+          setListings([]);
           setLoading(false);
           return;
         }
         setCategory(cat as Category);
-        const [subsRes, listsRes] = await Promise.all([
-          supabase.from('subcategories').select('*').eq('category_id', (cat as Category).id).order('sort_order'),
-          supabase.from('listings').select('*').eq('category_id', (cat as Category).id).eq('is_active', true).eq('is_hidden_by_admin', false).order('created_at', { ascending: false }),
-        ]);
-        setSubcats((subsRes.data as Subcategory[]) || []);
-        const lists = (listsRes.data as Listing[]) || [];
-        setListings(lists);
-        setLoading(false);
-        if (lists.length > 0) {
-          const [imgsRes, prodsRes] = await Promise.all([
-            supaClient.from('listing_images').select('*').in('listing_id', lists.map((l) => l.id)).order('sort_order'),
-            supaClient.from('products').select('*').in('listing_id', lists.map((l) => l.id)).order('created_at', { ascending: false }),
+        try {
+          const [subsRes, listsRes] = await Promise.all([
+            supabase.from('subcategories').select('*').eq('category_id', (cat as Category).id).order('sort_order'),
+            supabase.from('listings').select('*').eq('category_id', (cat as Category).id).eq('is_active', true).eq('is_hidden_by_admin', false).order('created_at', { ascending: false }),
           ]);
-          const imgMap: Record<string, string[]> = {};
-          (imgsRes.data as ListingImage[] || []).forEach((img) => {
-            if (!imgMap[img.listing_id]) imgMap[img.listing_id] = [];
-            imgMap[img.listing_id].push(img.url);
-          });
-          setListingImages(imgMap);
-          const prodMap: Record<string, Product[]> = {};
-          (prodsRes.data as Product[] || []).forEach((p) => {
-            if (!prodMap[p.listing_id]) prodMap[p.listing_id] = [];
-            prodMap[p.listing_id].push(p);
-          });
-          setListingProducts(prodMap);
+          setSubcats((subsRes.data as Subcategory[]) || []);
+          const lists = (listsRes.data as Listing[]) || [];
+          setListings(lists);
+          setLoading(false);
+          if (lists.length > 0) {
+            try {
+              const [imgsRes, prodsRes] = await Promise.all([
+                supaClient.from('listing_images').select('*').in('listing_id', lists.map((l) => l.id)).order('sort_order'),
+                supaClient.from('products').select('*').in('listing_id', lists.map((l) => l.id)).order('created_at', { ascending: false }),
+              ]);
+              const imgMap: Record<string, string[]> = {};
+              (imgsRes.data as ListingImage[] || []).forEach((img) => {
+                if (!imgMap[img.listing_id]) imgMap[img.listing_id] = [];
+                imgMap[img.listing_id].push(img.url);
+              });
+              setListingImages(imgMap);
+              const prodMap: Record<string, Product[]> = {};
+              (prodsRes.data as Product[] || []).forEach((p) => {
+                if (!prodMap[p.listing_id]) prodMap[p.listing_id] = [];
+                prodMap[p.listing_id].push(p);
+              });
+              setListingProducts(prodMap);
+            } catch {
+              // images/products are optional — ignore fetch errors
+            }
+          }
+        } catch {
+          setSubcats([]);
+          setListings([]);
+          setLoading(false);
         }
       });
   }, [slug]);

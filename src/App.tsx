@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useRouter, matchRoute, navigate } from '@/lib/router';
 import { Header } from '@/components/Header';
@@ -10,6 +10,7 @@ import { AdminPage } from '@/pages/AdminPage';
 import { ProfilePage, SettingsPage, HelpPage } from '@/pages/ProfilePages';
 import { ListingDetailPage } from '@/pages/ListingDetailPage';
 import { AskNourDrawer } from '@/components/AskNour';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Sparkles } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -18,20 +19,22 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [askOpen, setAskOpen] = useState(false);
+  const [askPrefill, setAskPrefill] = useState<string | undefined>(undefined);
+
+  const openAskNour = useCallback((prefill?: string) => {
+    setAskPrefill(prefill);
+    setAskOpen(true);
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      setAskOpen(true);
-      const detail = (e as CustomEvent).detail;
-      if (detail) {
-        window.dispatchEvent(new CustomEvent('ask-nour-prefill', { detail }));
-      }
+      const detail = (e as CustomEvent).detail as string | undefined;
+      openAskNour(detail);
     };
     window.addEventListener('open-ask-nour', handler);
     return () => window.removeEventListener('open-ask-nour', handler);
-  }, []);
+  }, [openAskNour]);
 
-  // Redirect away from /auth if already logged in
   useEffect(() => {
     if (user && route.path === '/auth') navigate('/');
   }, [route.path, user]);
@@ -44,11 +47,9 @@ function AppRoutes() {
     );
   }
 
-  // Strict auth guard: if not logged in, show ONLY the auth screen
   if (!user) {
     return <AuthPage />;
   }
-
 
   let content: React.ReactNode;
 
@@ -84,18 +85,23 @@ function AppRoutes() {
   return (
     <div className="min-h-screen">
       <Header onSearch={setSearchQuery} />
-      {content}
+      <ErrorBoundary key={route.path} resetKey={route.path}>
+        {content}
+      </ErrorBoundary>
 
-      {/* Floating Ask Nour button */}
       <button
-        onClick={() => setAskOpen(true)}
+        onClick={() => openAskNour()}
         className="fixed bottom-6 left-6 z-[80] w-14 h-14 rounded-full btn-gold flex items-center justify-center shadow-2xl hover:scale-110 transition-transform animate-pulse-glow"
         aria-label="اسأل نور"
       >
         <Sparkles size={26} />
       </button>
 
-      <AskNourDrawer open={askOpen} onClose={() => setAskOpen(false)} />
+      <AskNourDrawer
+        open={askOpen}
+        prefill={askPrefill}
+        onClose={() => { setAskOpen(false); setAskPrefill(undefined); }}
+      />
     </div>
   );
 }
