@@ -54,12 +54,17 @@ function AppRoutes() {
 
   if (route.path === '/' || route.path === '') {
     content = <HomePage searchQuery={searchQuery} />;
-  } else if (matchRoute(route.path, '/category/:slug')) {
-    const { slug } = matchRoute(route.path, '/category/:slug')!;
-    content = <CategoryPage slug={slug} />;
-  } else if (matchRoute(route.path, '/listing/:id')) {
-    const { id } = matchRoute(route.path, '/listing/:id')!;
-    content = <ListingDetailPage id={id} />;
+      } else if (matchRoute(route.path, '/category/:slug')) {
+      const match = matchRoute(route.path, '/category/:slug');
+      const slugValue = typeof match === 'object' && match !== null 
+        ? (match.slug || Object.values(match)[0] || '') 
+        : String(match || '');
+      content = <CategoryPage slug={slugValue} />;
+    } else if (matchRoute(route.path, '/listing/:id')) {
+      const { id } = matchRoute(route.path, '/listing/:id')!;
+      content = <ListingDetailPage id={id} />;
+    }
+
   } else if (route.path === '/dashboard') {
     content = <DashboardPage />;
   } else if (route.path === '/admin') {
