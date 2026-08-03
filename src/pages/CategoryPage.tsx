@@ -68,7 +68,7 @@ export function CategoryPage({ slug }: { slug: string }) {
               const imgMap: Record<string, string[]> = {};
               (imgsRes.data as ListingImage[] || []).forEach((img) => {
                 if (!imgMap[img.listing_id]) imgMap[img.listing_id] = [];
-                imgMap[img.listing_id].push(img.img_url);
+                imgMap[img.listing_id].push(img.url);
               });
               setListingImages(imgMap);
 
