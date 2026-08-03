@@ -53,7 +53,7 @@ function AppRoutes() {
   if (route.path === '/' || route.path === '') {
     content = <HomePage searchQuery={searchQuery} />;
   } else if (catMatch) {
-    content = <CategoryPage slug={catMatch.slug} />;
+    content = <CategoryPage key={catMatch.slug} slug={catMatch.slug} />;
   } else if (listMatch) {
     content = <ListingDetailPage id={listMatch.id} />;
   } else if (route.path === '/dashboard') {

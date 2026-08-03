@@ -41,6 +41,7 @@ export function CategoryPage({ slug }: { slug: string }) {
       .maybeSingle()
       .then(async ({ data: cat, error: catErr }) => {
         if (catErr || !cat) {
+          console.error('[CategoryPage] Failed to load category:', { decodedSlug, catErr, cat });
           setCategory(null);
           setSubcats([]);
           setListings([]);
