@@ -37,7 +37,7 @@ export function CategoryPage({ slug }: { slug: string }) {
     supabase
       .from('categories')
       .select('*')
-      .or(`slug.eq.${decodedSlug},id.eq.${decodedSlug},name.eq.${decodedSlug}`)
+      .eq('slug', decodedSlug)
       .maybeSingle()
       .then(async ({ data: cat, error: catErr }) => {
         if (catErr || !cat) {
